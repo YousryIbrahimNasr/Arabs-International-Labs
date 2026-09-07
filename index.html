@@ -33,16 +33,39 @@
     --font-mono:ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
     --font-sans:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
+  html[data-theme="dark"]{
+    --ink:#F2F2F7;
+    --ink-2:#D1D1D6;
+    --paper:#000000;
+    --card:#1C1C1E;
+    --line:#2C2C2E;
+    --line-strong:#48484A;
+    --muted:#98989D;
+    --accent:#0A84FF;
+    --accent-ink:#5AC8FA;
+    --safe:#30D158;
+    --safe-bg:#0F2A18;
+    --safe-ink:#30D158;
+    --warn:#FF9F0A;
+    --warn-bg:#3A2705;
+    --warn-ink:#FF9F0A;
+    --danger:#FF453A;
+    --danger-bg:#3A1210;
+    --danger-ink:#FF453A;
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 4px 14px rgba(0,0,0,0.4);
+  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;background:var(--paper);font-family:var(--font-sans);color:var(--ink);}
+  html,body{margin:0;padding:0;background:var(--paper);font-family:var(--font-sans);color:var(--ink);transition:background .2s, color .2s;}
   body{padding-bottom:60px;}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .cover{width:100%;display:block;object-fit:cover;}
-  .topbar{background:#fff;color:var(--ink);padding:18px 20px 16px;display:flex;align-items:center;gap:14px;position:relative;box-shadow:0 1px 0 rgba(0,0,0,0.05);}
+  .topbar{background:var(--card);color:var(--ink);padding:18px 20px 16px;display:flex;align-items:center;gap:14px;position:relative;box-shadow:0 1px 0 rgba(0,0,0,0.05);}
   .logo{width:52px;height:52px;border-radius:50%;flex-shrink:0;object-fit:cover;box-shadow:0 0 0 3px #fff, 0 2px 8px rgba(0,0,0,0.15);}
   .topbar-text{min-width:0;}
   .switch-branch-link{background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:500;text-decoration:none;padding:0;margin-top:6px;cursor:pointer;font-family:var(--font-sans);}
   .switch-branch-link:hover{text-decoration:underline;}
+  .theme-toggle-btn{margin-left:auto;background:var(--line);border:none;width:38px;height:38px;border-radius:50%;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .theme-toggle-btn:hover{background:var(--line-strong);}
   .branch-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
   .branch-option{background:var(--line);color:var(--ink);border:none;text-align:left;font-weight:500;}
   .branch-option:hover{background:var(--line-strong);}
@@ -127,7 +150,7 @@
   .empty .big{font-family:var(--font-sans);font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px;}
   .overlay{position:fixed;inset:0;background:rgba(20,26,32,0.45);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
   @media(min-width:640px){.overlay{align-items:center;}}
-  .modal{background:#fff;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;border-radius:24px 24px 0 0;padding:28px 20px 20px;position:relative;}
+  .modal{background:var(--card);width:100%;max-width:480px;max-height:92vh;overflow-y:auto;border-radius:24px 24px 0 0;padding:28px 20px 20px;position:relative;}
   .modal::before{content:'';position:absolute;top:9px;left:50%;transform:translateX(-50%);width:36px;height:5px;border-radius:3px;background:var(--line-strong);}
   @media(min-width:640px){.modal{border-radius:20px;padding:22px 20px 20px;}.modal::before{display:none;}}
   .modal h2{font-family:var(--font-sans);font-size:18px;font-weight:700;margin:4px 0 16px;color:var(--ink);letter-spacing:-.01em;}
@@ -161,24 +184,39 @@
   .alarm-text{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--danger-ink);font-weight:600;}
   .alarm-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;display:inline-block;}
   .alarm-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
-  .alarm-actions .btn{padding:6px 12px;font-size:12px;background:#fff;color:var(--danger-ink);}
+  .alarm-actions .btn{padding:6px 12px;font-size:12px;background:var(--card);color:var(--danger-ink);}
   .alarm-actions .iconbtn{color:var(--danger-ink);font-size:14px;background:rgba(255,255,255,0.6);width:26px;height:26px;}
   .stock-banner{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--warn-bg);border-radius:var(--r-md);margin:10px 16px 0;padding:12px 14px;box-shadow:var(--shadow);}
   .stock-text{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--warn-ink);font-weight:600;}
   .stock-dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0;display:inline-block;}
   .stock-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
-  .stock-actions .btn{padding:6px 12px;font-size:12px;background:#fff;color:var(--warn-ink);}
+  .stock-actions .btn{padding:6px 12px;font-size:12px;background:var(--card);color:var(--warn-ink);}
   .stock-actions .iconbtn{color:var(--warn-ink);font-size:14px;background:rgba(255,255,255,0.6);width:26px;height:26px;}
-  .share-menu{background:#fff;border-radius:24px;padding:22px 18px 18px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;position:relative;}
+  .share-menu{background:var(--card);border-radius:24px;padding:22px 18px 18px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;position:relative;}
   .share-menu::before{content:'';position:absolute;top:9px;left:50%;transform:translateX(-50%);width:36px;height:5px;border-radius:3px;background:var(--line-strong);}
   .share-menu-title{font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:4px;}
   .share-option{background:var(--accent);color:#fff;}
   .share-option:hover{opacity:.85;}
 </style>
+<script>
+  (function(){
+    try{
+      var saved = localStorage.getItem('arabs-labs-theme');
+      if(saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    }catch(e){}
+  })();
+</script>
 <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script src="https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>
+  if(typeof pdfjsLib !== 'undefined'){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  }
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
@@ -214,6 +252,7 @@
   <button class="switch-branch-link" id="switchBranchBtn" type="button">Switch branch</button>
   <button class="switch-branch-link" id="switchUserBtn" type="button" style="margin-left:12px;">Switch user</button>
   </div>
+  <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Toggle dark mode">🌙</button>
 </div>
 
 <div class="stats">
@@ -250,6 +289,8 @@
   <button class="btn secondary" id="scanBtn">Scan kit</button>
   <button class="btn" id="addBtn">+ Add item</button>
   <button class="btn secondary" id="shareBtn">Share</button>
+  <button class="btn secondary" id="importBtn">Import file</button>
+  <input type="file" id="importFileInput" accept=".xlsx,.docx,.pdf" style="display:none;">
   <button class="btn secondary" id="notifyBtn">Enable alerts</button>
 </div>
 
@@ -394,6 +435,19 @@
 
   function uid(){ return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+
+  function parseDateCell(val){
+    if(val === null || val === undefined || val === '') return null;
+    if(val instanceof Date) return val.toISOString().slice(0,10);
+    if(typeof val === 'object' && val.text !== undefined) val = val.text;
+    if(typeof val === 'string'){
+      var trimmed = val.trim();
+      if(/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+      var d2 = new Date(trimmed);
+      if(!isNaN(d2.getTime())) return d2.toISOString().slice(0,10);
+    }
+    return null;
+  }
   function daysBetween(a,b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
   function fmtDate(iso){
     if(!iso) return '—';
@@ -494,6 +548,63 @@
     return { tier: tier, daysToExp: daysToExp, expired: expired };
   }
 
+  var STOCKOUT_WARNING_WEEKS = 4;
+  var MAX_HISTORY_ENTRIES = 40;
+
+  function computeConsumptionForecast(item){
+    var history = item.quantityHistory;
+    if(!history || history.length < 2) return null;
+
+    var sorted = history.slice().sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
+    var totalDecrease = 0;
+    var totalDays = 0;
+
+    for(var i = 1; i < sorted.length; i++){
+      var prev = sorted[i-1];
+      var cur = sorted[i];
+      var days = daysBetween(prev.date, cur.date);
+      if(days <= 0) continue;
+      if(cur.totalQty < prev.totalQty){
+        totalDecrease += (prev.totalQty - cur.totalQty);
+        totalDays += days;
+      }
+    }
+
+    if(totalDays === 0 || totalDecrease <= 0) return null;
+
+    var perDay = totalDecrease / totalDays;
+    if(perDay <= 0) return null;
+
+    var currentQty = sorted[sorted.length - 1].totalQty;
+    var daysRemaining = currentQty / perDay;
+    var weeksRemaining = Math.round((daysRemaining / 7) * 10) / 10;
+
+    return {
+      perDay: perDay,
+      daysRemaining: Math.round(daysRemaining),
+      weeksRemaining: weeksRemaining
+    };
+  }
+
+  function recordQuantitySnapshot(existingHistory, newTotalQty){
+    var history = (existingHistory || []).slice();
+    var last = history.length ? history[history.length - 1] : null;
+    if(last && last.totalQty === newTotalQty){
+      return history;
+    }
+    history.push({ date: todayISO(), totalQty: newTotalQty });
+    if(history.length > MAX_HISTORY_ENTRIES){
+      history = history.slice(history.length - MAX_HISTORY_ENTRIES);
+    }
+    return history;
+  }
+
+  function totalQtyFromLots(lots){
+    return lots.reduce(function(sum, lot){
+      return sum + (lot.quantity !== null && lot.quantity !== undefined ? Number(lot.quantity) : 0);
+    }, 0);
+  }
+
   function computeItemStatus(item){
     var lots = normalizeLots(item);
     var tierOrder = {red:0, yellow:1, green:2, none:3};
@@ -511,9 +622,7 @@
     });
 
     var hasAnyQty = lots.some(function(lot){ return lot.quantity !== null && lot.quantity !== undefined; });
-    var totalQty = lots.reduce(function(sum, lot){
-      return sum + (lot.quantity !== null && lot.quantity !== undefined ? Number(lot.quantity) : 0);
-    }, 0);
+    var totalQty = totalQtyFromLots(lots);
 
     var flags = [];
     if(lotStatuses.some(function(ls){ return ls.status.expired; })) flags.push('expired');
@@ -525,6 +634,11 @@
       if(totalQty <= Number(item.reorderThreshold)) flags.push('lowstock');
     }
 
+    var forecast = computeConsumptionForecast(item);
+    if(forecast && forecast.weeksRemaining <= STOCKOUT_WARNING_WEEKS){
+      flags.push('predictedStockout');
+    }
+
     return {
       tier: worst,
       flags: flags,
@@ -532,6 +646,7 @@
       totalQty: totalQty,
       hasAnyQty: hasAnyQty,
       lotStatuses: lotStatuses,
+      forecast: forecast,
       sortKey: tierOrder[worst] * 100000 + (worstDays===null ? 99999 : worstDays)
     };
   }
@@ -1175,6 +1290,274 @@
     return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   }
 
+  var IMPORT_COLUMN_MAP = {
+    'name':'name',
+    'department':'category',
+    'barcode':'barcode',
+    'lot number':'lotNumber',
+    'quantity':'quantity',
+    'unit':'unit',
+    'reorder threshold':'reorderThreshold',
+    'storage temperature':'storageTemp',
+    'refrigerated':'refrigerated',
+    'location':'location',
+    'expiration date':'expirationDate',
+    'date received/opened':'dateAdded',
+    'reorder-by date':'reorderDate',
+    'notes':'notes'
+  };
+
+  async function extractGridFromExcel(file){
+    var buf = await file.arrayBuffer();
+    var workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buf);
+    var sheet = workbook.worksheets[0];
+    if(!sheet) return [];
+    var grid = [];
+    var maxCol = Math.max(sheet.columnCount || 0, 20);
+    for(var r = 1; r <= sheet.rowCount; r++){
+      var row = sheet.getRow(r);
+      var arr = [];
+      for(var c = 1; c <= maxCol; c++){
+        var v = row.getCell(c).value;
+        if(v && typeof v === 'object' && v.text !== undefined) v = v.text;
+        arr.push(v === null || v === undefined ? '' : v);
+      }
+      grid.push(arr);
+    }
+    return grid;
+  }
+
+  function extractGridFromDocx(file){
+    return file.arrayBuffer().then(function(buf){
+      return mammoth.convertToHtml({ arrayBuffer: buf });
+    }).then(function(result){
+      var div = document.createElement('div');
+      div.innerHTML = result.value;
+      var table = div.querySelector('table');
+      if(!table) return null;
+      var grid = [];
+      table.querySelectorAll('tr').forEach(function(tr){
+        var cells = [];
+        tr.querySelectorAll('td,th').forEach(function(td){
+          cells.push(td.textContent.trim());
+        });
+        grid.push(cells);
+      });
+      return grid;
+    });
+  }
+
+  async function extractGridFromPDF(file){
+    var buf = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    var grid = [];
+    for(var p = 1; p <= pdf.numPages; p++){
+      var page = await pdf.getPage(p);
+      var content = await page.getTextContent();
+      var lines = {};
+      content.items.forEach(function(item){
+        var y = Math.round(item.transform[5]);
+        var matchedY = null;
+        for(var key in lines){
+          if(Math.abs(Number(key) - y) <= 2){ matchedY = key; break; }
+        }
+        var useKey = matchedY !== null ? matchedY : y;
+        if(!lines[useKey]) lines[useKey] = [];
+        lines[useKey].push(item);
+      });
+      var ys = Object.keys(lines).map(Number).sort(function(a,b){ return b - a; });
+      ys.forEach(function(y){
+        var lineItems = lines[y].slice().sort(function(a,b){ return a.transform[4] - b.transform[4]; });
+        var cols = [];
+        var currentText = '';
+        var lastEndX = null;
+        lineItems.forEach(function(it){
+          var x = it.transform[4];
+          if(lastEndX !== null && (x - lastEndX) > 12){
+            cols.push(currentText.trim());
+            currentText = '';
+          }
+          currentText += it.str;
+          lastEndX = x + (it.width || 0);
+        });
+        if(currentText.trim()) cols.push(currentText.trim());
+        if(cols.length) grid.push(cols);
+      });
+    }
+    return grid;
+  }
+
+  function processGridRows(grid){
+    if(!grid || grid.length === 0) return null;
+
+    var headerRowIndex = null;
+    var headerMap = {};
+    for(var r = 0; r < Math.min(10, grid.length); r++){
+      var row = grid[r] || [];
+      var found = {};
+      var hasName = false;
+      row.forEach(function(cellVal, colIdx){
+        var text = String(cellVal || '').trim().toLowerCase();
+        if(IMPORT_COLUMN_MAP[text]){
+          found[IMPORT_COLUMN_MAP[text]] = colIdx;
+          if(IMPORT_COLUMN_MAP[text] === 'name') hasName = true;
+        }
+      });
+      if(hasName){
+        headerRowIndex = r;
+        headerMap = found;
+        break;
+      }
+    }
+    if(headerRowIndex === null) return null;
+
+    function cellAt(row, key){
+      if(headerMap[key] === undefined) return null;
+      var v = row[headerMap[key]];
+      return (v === undefined) ? null : v;
+    }
+
+    var grouped = {};
+    var order = [];
+
+    for(var r2 = headerRowIndex + 1; r2 < grid.length; r2++){
+      var row2 = grid[r2] || [];
+      var rawName = cellAt(row2, 'name');
+      var name = rawName ? String(rawName).trim() : '';
+      if(!name) continue;
+
+      var barcode = cellAt(row2, 'barcode') ? String(cellAt(row2, 'barcode')).trim() : '';
+      var key = name.toLowerCase() + '||' + barcode.toLowerCase();
+
+      if(!grouped[key]){
+        var thresholdRaw = cellAt(row2, 'reorderThreshold');
+        grouped[key] = {
+          name: name,
+          barcode: barcode,
+          category: cellAt(row2, 'category') ? String(cellAt(row2, 'category')).trim() : '',
+          location: cellAt(row2, 'location') ? String(cellAt(row2, 'location')).trim() : '',
+          unit: cellAt(row2, 'unit') ? String(cellAt(row2, 'unit')).trim() : '',
+          storageTemp: cellAt(row2, 'storageTemp') ? String(cellAt(row2, 'storageTemp')).trim() : '',
+          refrigerated: /^y/i.test(String(cellAt(row2, 'refrigerated') || '')),
+          reorderThreshold: (thresholdRaw !== null && thresholdRaw !== '' && Number(thresholdRaw) >= 0) ? Number(thresholdRaw) : null,
+          reorderDate: parseDateCell(cellAt(row2, 'reorderDate')),
+          notes: cellAt(row2, 'notes') ? String(cellAt(row2, 'notes')).trim() : '',
+          lots: []
+        };
+        order.push(key);
+      }
+
+      var qtyRaw = cellAt(row2, 'quantity');
+      var qty = (qtyRaw !== null && qtyRaw !== '') ? Number(qtyRaw) : null;
+      if(qty !== null && (isNaN(qty) || qty < 0)) qty = null;
+
+      grouped[key].lots.push({
+        id: uid(),
+        lotNumber: cellAt(row2, 'lotNumber') ? String(cellAt(row2, 'lotNumber')).trim() : '',
+        quantity: qty,
+        expirationDate: parseDateCell(cellAt(row2, 'expirationDate')),
+        dateAdded: parseDateCell(cellAt(row2, 'dateAdded')) || todayISO(),
+        addedBy: currentStaffName || 'Unknown'
+      });
+    }
+
+    return order.map(function(k){ return grouped[k]; });
+  }
+
+  async function handleImportFile(file){
+    var importBtn = document.getElementById('importBtn');
+    if(importBtn){ importBtn.disabled = true; importBtn.textContent = 'Reading...'; }
+
+    try{
+      var ext = file.name.split('.').pop().toLowerCase();
+      var grid = null;
+      var isPdf = false;
+
+      if(ext === 'xlsx'){
+        if(typeof ExcelJS === 'undefined'){
+          alert('The Excel library did not load. Check your internet connection and try again.');
+          return;
+        }
+        grid = await extractGridFromExcel(file);
+      } else if(ext === 'docx'){
+        if(typeof mammoth === 'undefined'){
+          alert('The Word import library did not load. Check your internet connection and try again.');
+          return;
+        }
+        grid = await extractGridFromDocx(file);
+        if(!grid){
+          alert('No table found in this Word document. Please format your kit list as a table with column headers like "Name", "Lot number", "Expiration date", etc.');
+          return;
+        }
+      } else if(ext === 'pdf'){
+        if(typeof pdfjsLib === 'undefined'){
+          alert('The PDF import library did not load. Check your internet connection and try again.');
+          return;
+        }
+        isPdf = true;
+        grid = await extractGridFromPDF(file);
+      } else {
+        alert('Unsupported file type. Please use .xlsx, .docx, or .pdf.');
+        return;
+      }
+
+      var itemsToImport = processGridRows(grid);
+      if(!itemsToImport || itemsToImport.length === 0){
+        alert('Could not find a "Name" column in this file. Please make sure it has a clear header row with a "Name" column, ideally matching the format from "Share → Excel spreadsheet".');
+        return;
+      }
+
+      var totalLots = itemsToImport.reduce(function(sum, it){ return sum + it.lots.length; }, 0);
+      var pdfWarning = isPdf ? '\n\nNote: PDF reading is best-effort — please double-check the results afterward, especially dates and numbers.' : '';
+      var proceed = confirm('Found ' + itemsToImport.length + ' kit(s) with ' + totalLots + ' lot(s) total.\n\nImport into "' + currentBranch + '"? Kits matching an existing barcode will have their lots added to that kit instead of creating a duplicate.' + pdfWarning);
+      if(!proceed) return;
+
+      if(importBtn){ importBtn.textContent = 'Importing...'; }
+      await commitImport(itemsToImport);
+
+    }catch(e){
+      console.error(e);
+      alert('Could not read this file. Make sure it\'s a valid .xlsx, .docx, or .pdf file.');
+    }finally{
+      if(importBtn){ importBtn.disabled = false; importBtn.textContent = 'Import file'; }
+    }
+  }
+
+  async function commitImport(itemsToImport){
+    var staffName = currentStaffName || 'Unknown';
+    var now = new Date().toISOString();
+    var created = 0, mergedLots = 0;
+
+    for(var i = 0; i < itemsToImport.length; i++){
+      var imp = itemsToImport[i];
+      var existing = imp.barcode ? items.find(function(it){ return it.barcode && it.barcode === imp.barcode; }) : null;
+
+      try{
+        if(existing){
+          var lots = normalizeLots(existing).slice();
+          imp.lots.forEach(function(l){ lots.push(l); });
+          await itemsCollection().doc(existing.id).set({ lots: lots, updatedBy: staffName, updatedAt: now }, { merge: true });
+          mergedLots += imp.lots.length;
+        } else {
+          var data = {
+            name: imp.name, barcode: imp.barcode, category: imp.category, location: imp.location,
+            unit: imp.unit, storageTemp: imp.storageTemp, refrigerated: imp.refrigerated,
+            reorderThreshold: imp.reorderThreshold, reorderDate: imp.reorderDate, notes: imp.notes,
+            lots: imp.lots, createdBy: staffName, createdAt: now, updatedBy: staffName, updatedAt: now
+          };
+          await itemsCollection().doc(uid()).set(data);
+          upsertCatalog(data);
+          created++;
+        }
+      }catch(e){
+        console.error('Import row failed', imp.name, e);
+      }
+    }
+
+    alert('Import complete: ' + created + ' new kit(s) added, ' + mergedLots + ' lot(s) merged into existing kits.');
+  }
+
   function drawPdfLogo(doc){
     try{
       var pageWidth = doc.internal.pageSize.getWidth();
@@ -1666,6 +2049,14 @@
   document.getElementById('filter').addEventListener('change', render);
   document.getElementById('categoryFilter').addEventListener('change', render);
   document.getElementById('shareBtn').addEventListener('click', openShareMenu);
+  document.getElementById('importBtn').addEventListener('click', function(){
+    document.getElementById('importFileInput').click();
+  });
+  document.getElementById('importFileInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(file) handleImportFile(file);
+    e.target.value = '';
+  });
   document.getElementById('notifyBtn').addEventListener('click', function(){
     if(typeof Notification === 'undefined'){
       alert('Browser notifications are not supported here. The on-screen and sound alarm will still work.');
@@ -1761,6 +2152,30 @@
     }
     document.getElementById('scannerRoot').innerHTML = '';
   }
+
+  function applyTheme(theme){
+    if(theme === 'dark'){
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    try{ localStorage.setItem('arabs-labs-theme', theme); }catch(e){}
+    updateThemeButton();
+  }
+
+  function updateThemeButton(){
+    var btn = document.getElementById('themeToggleBtn');
+    if(!btn) return;
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    btn.textContent = isDark ? '☀️' : '🌙';
+    btn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+  }
+
+  document.getElementById('themeToggleBtn').addEventListener('click', function(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    applyTheme(isDark ? 'light' : 'dark');
+  });
+  updateThemeButton();
 
   document.getElementById('switchBranchBtn').addEventListener('click', function(){ openBranchModal(false); });
   document.getElementById('switchUserBtn').addEventListener('click', function(){
