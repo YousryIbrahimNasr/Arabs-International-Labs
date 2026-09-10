@@ -221,6 +221,7 @@
 </script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
   // ================= FIREBASE SETUP =================
   // 1. Go to https://console.firebase.google.com and create a free project.
@@ -252,7 +253,8 @@
   <h1 class="title">INVENTORY MANAGEMENT SYSTEM</h1>
   <p class="subtitle" id="subtitle">Loading...</p>
   <button class="switch-branch-link" id="switchBranchBtn" type="button">Switch branch</button>
-  <button class="switch-branch-link" id="switchUserBtn" type="button" style="margin-left:12px;">Switch user</button>
+  <button class="switch-branch-link" id="logoutBtn" type="button" style="margin-left:12px;">Log out</button>
+  <button class="switch-branch-link" id="manageStaffBtn" type="button" style="margin-left:12px;display:none;">Manage staff</button>
   </div>
   <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Toggle dark mode">🌙</button>
 </div>
@@ -319,42 +321,11 @@
   var currentStaffName = null;
   var currentStaffTitle = null;
 
-  var STAFF_DIRECTORIES = {
-    'helwan branch': {
-      'fatma elsayed': { displayName: 'Dr/ Fatma Elsayed', title: 'Helwan Branch and Collection Manager' },
-      'esraa mohamed': { displayName: 'Dr/ Esraa Mohamed', title: 'Medical Laboratory Scientist, Helwan Branch' },
-      'yousry ibrahim': { displayName: 'Dr/ Yousry Ibrahim', title: 'Medical Laboratory Scientist, Helwan Branch' }
-    }
-    // Add more branches here as needed, e.g.:
-    // 'nasr city branch': {
-    //   'some name': { displayName: 'Dr/ Some Name', title: 'Some Title, Nasr City Branch' }
-    // }
-  };
+  var currentUserRole = null; // 'admin' or 'staff'
+  var currentUserEmail = null;
 
-  function normalizeKey(str){
-    return str.trim().toLowerCase().replace(/\s+/g,' ');
-  }
-
-  function lookupStaffDirectory(name){
-    if(!currentBranch) return null;
-    var branchDir = STAFF_DIRECTORIES[normalizeKey(currentBranch)];
-    if(!branchDir) return null;
-    return branchDir[normalizeKey(name)] || null;
-  }
-
-  function getStaffInfo(){
-    try{
-      var raw = localStorage.getItem(STAFF_NAME_KEY);
-      return raw ? JSON.parse(raw) : null;
-    }catch(e){
-      return null;
-    }
-  }
-
-  function setStaffInfo(info){
-    try{
-      localStorage.setItem(STAFF_NAME_KEY, JSON.stringify(info));
-    }catch(e){}
+  function emailDocId(email){
+    return email.trim().toLowerCase();
   }
 
   function updateStaffHeader(){
@@ -366,76 +337,159 @@
     } else {
       el.style.display = 'none';
     }
+    var manageBtn = document.getElementById('manageStaffBtn');
+    if(manageBtn) manageBtn.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
   }
 
-  function renderNameEntryModal(onDone){
+  async function loadStaffProfile(email){
+    try{
+      var doc = await db.collection('authorizedStaff').doc(emailDocId(email)).get();
+      if(doc.exists) return doc.data();
+    }catch(e){ console.error(e); }
+    return null;
+  }
+
+  function renderAuthScreen(){
     var root = document.getElementById('branchModalRoot');
-    root.innerHTML =
-      '<div class="overlay" id="nameOverlay">' +
-        '<div class="modal">' +
-          '<h2>Who\'s using this device?</h2>' +
-          '<div class="hint">Your name is attached to items you add or edit, so the team knows who logged what.</div>' +
-          '<div class="field"><label>Your name</label><input id="staffNameInput" type="text" placeholder="e.g. Ahmed Nasr"></div>' +
-          '<div class="hint" id="staffTitlePreview" style="display:none;"></div>' +
-          '<div class="modal-actions">' +
-            '<button class="btn" id="staffNameContinueBtn">Continue</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
 
-    var input = document.getElementById('staffNameInput');
-    var preview = document.getElementById('staffTitlePreview');
-
-    input.addEventListener('input', function(){
-      var match = lookupStaffDirectory(input.value);
-      if(match){
-        preview.textContent = match.displayName + ' — ' + match.title;
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
-    });
-
-    document.getElementById('staffNameContinueBtn').addEventListener('click', function(){
-      var val = input.value.trim();
-      if(!val) return;
-      var match = lookupStaffDirectory(val);
-      var finalName = match ? match.displayName : val;
-      var finalTitle = match ? match.title : null;
-      setStaffInfo({ name: finalName, title: finalTitle });
-      currentStaffName = finalName;
-      currentStaffTitle = finalTitle;
-      updateStaffHeader();
-
+    function draw(mode, errorMsg){
+      var isSignup = mode === 'signup';
       root.innerHTML =
-        '<div class="overlay">' +
-          '<div class="modal" style="text-align:center;">' +
-            '<h2>Welcome back' + (finalName ? ', ' + escapeHtml(finalName) : '') + '</h2>' +
-            (finalTitle ? '<div class="hint" style="text-align:center;">' + escapeHtml(finalTitle) + '</div>' : '') +
+        '<div class="overlay" id="authOverlay">' +
+          '<div class="modal">' +
+            '<h2>' + (isSignup ? 'Create your account' : 'Sign in') + '</h2>' +
+            (errorMsg ? '<div class="err" style="display:block;margin-bottom:10px;">' + escapeHtml(errorMsg) + '</div>' : '') +
+            '<div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>' +
+            '<div class="field"><label>Password</label><input id="authPassword" type="password" placeholder="At least 6 characters" autocomplete="' + (isSignup ? 'new-password' : 'current-password') + '"></div>' +
+            (isSignup ? '<div class="hint">Your account must already be approved by an admin, unless you\'re the very first person setting this up.</div>' : '') +
+            '<div class="modal-actions">' +
+              '<button class="btn" id="authSubmitBtn">' + (isSignup ? 'Create account' : 'Sign in') + '</button>' +
+            '</div>' +
+            '<div class="hint" style="text-align:center;margin-top:10px;">' +
+              (isSignup ? 'Already have an account? <a href="#" id="authSwitchLink">Sign in</a>' : 'New here? <a href="#" id="authSwitchLink">Create an account</a>') +
+            '</div>' +
           '</div>' +
         '</div>';
 
-      setTimeout(function(){
-        root.innerHTML = '';
-        onDone();
-      }, 1400);
-    });
-    input.addEventListener('keydown', function(e){
-      if(e.key === 'Enter') document.getElementById('staffNameContinueBtn').click();
-    });
+      document.getElementById('authSwitchLink').addEventListener('click', function(e){
+        e.preventDefault();
+        draw(isSignup ? 'login' : 'signup', null);
+      });
+
+      document.getElementById('authSubmitBtn').addEventListener('click', function(){
+        var email = document.getElementById('authEmail').value.trim();
+        var password = document.getElementById('authPassword').value;
+        if(!email || !password){
+          draw(mode, 'Enter both email and password.');
+          return;
+        }
+        if(isSignup) doSignup(email, password, draw);
+        else doLogin(email, password, draw);
+      });
+    }
+
+    draw('login', null);
   }
 
-  function ensureStaffName(callback){
-    var saved = getStaffInfo();
-    if(saved && saved.name){
-      currentStaffName = saved.name;
-      currentStaffTitle = saved.title || null;
-      updateStaffHeader();
-      callback();
+  async function doLogin(email, password, draw){
+    try{
+      await firebase.auth().signInWithEmailAndPassword(email, password);
+    }catch(e){
+      draw('login', e.message || 'Could not sign in.');
+    }
+  }
+
+  async function doSignup(email, password, draw){
+    if(password.length < 6){
+      draw('signup', 'Password must be at least 6 characters.');
       return;
     }
-    renderNameEntryModal(callback);
+    try{
+      var staffSnapshot = await db.collection('authorizedStaff').limit(1).get();
+      var isBootstrap = staffSnapshot.empty;
+      var preApproved = null;
+
+      if(!isBootstrap){
+        var doc = await db.collection('authorizedStaff').doc(emailDocId(email)).get();
+        if(!doc.exists){
+          draw('signup', 'This email hasn\'t been approved yet. Ask an admin to add you first.');
+          return;
+        }
+        preApproved = doc.data();
+      }
+
+      var cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+
+      if(isBootstrap){
+        var name = prompt('Your name (e.g. Dr/ Fatma Elsayed):') || email;
+        var title = prompt('Your title (e.g. Helwan Branch Manager):') || '';
+        await db.collection('authorizedStaff').doc(emailDocId(email)).set({
+          email: email, name: name, title: title, role: 'admin',
+          addedBy: 'self (first setup)', addedAt: new Date().toISOString()
+        });
+      }
+      // onAuthStateChanged will pick up the new signed-in user and load their profile
+    }catch(e){
+      draw('signup', e.message || 'Could not create account.');
+    }
   }
+
+  function renderManageStaffModal(){
+    var root = document.getElementById('modalRoot');
+
+    async function draw(){
+      var snap = await db.collection('authorizedStaff').get();
+      var rows = [];
+      snap.forEach(function(doc){ rows.push(doc.data()); });
+
+      var rowsHtml = rows.map(function(r){
+        return '<div class="lot-row"><div class="lot-body">' +
+          '<div class="lot-row1"><span class="lot-number">' + escapeHtml(r.name || r.email) + '</span>' +
+          '<span class="badge ' + (r.role==='admin' ? 'reorder' : 'none') + '">' + (r.role||'staff').toUpperCase() + '</span></div>' +
+          '<div class="lot-row2"><span class="lot-exp">' + escapeHtml(r.email) + '</span></div>' +
+          (r.title ? '<div class="lot-by">' + escapeHtml(r.title) + '</div>' : '') +
+        '</div></div>';
+      }).join('');
+
+      root.innerHTML =
+        '<div class="overlay" id="staffOverlay">' +
+          '<div class="modal">' +
+            '<h2>Manage staff access</h2>' +
+            '<div class="lot-list" style="margin-bottom:16px;">' + (rowsHtml || '<div class="hint">No staff added yet.</div>') + '</div>' +
+            '<div class="hint">Add a new authorized email — they\'ll set their own password when they sign up.</div>' +
+            '<div class="field"><label>Email</label><input id="newStaffEmail" type="email" placeholder="colleague@example.com"></div>' +
+            '<div class="field"><label>Name</label><input id="newStaffName" type="text" placeholder="e.g. Dr/ Esraa Mohamed"></div>' +
+            '<div class="field"><label>Title</label><input id="newStaffTitle" type="text" placeholder="e.g. Medical Laboratory Scientist, Helwan Branch"></div>' +
+            '<div class="field"><label>Role</label><select id="newStaffRole"><option value="staff">Staff (cannot delete)</option><option value="admin">Admin (can delete)</option></select></div>' +
+            '<div class="modal-actions">' +
+              '<button class="btn secondary" id="staffCloseBtn">Close</button>' +
+              '<button class="btn" id="addStaffBtn">Add</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      document.getElementById('staffCloseBtn').addEventListener('click', function(){ root.innerHTML = ''; });
+      document.getElementById('addStaffBtn').addEventListener('click', async function(){
+        var email = document.getElementById('newStaffEmail').value.trim();
+        var name = document.getElementById('newStaffName').value.trim();
+        var title = document.getElementById('newStaffTitle').value.trim();
+        var role = document.getElementById('newStaffRole').value;
+        if(!email || !name) return;
+        try{
+          await db.collection('authorizedStaff').doc(emailDocId(email)).set({
+            email: email, name: name, title: title, role: role,
+            addedBy: currentStaffName || currentUserEmail, addedAt: new Date().toISOString()
+          });
+          draw();
+        }catch(e){
+          alert('Could not add staff member. Check your connection.');
+        }
+      });
+    }
+
+    draw();
+  }
+
   var currentBranch = null;
   var items = [];
   var editingId = null;
@@ -931,24 +985,50 @@
     }
   }
 
-  async function initApp(){
-    var ok = initFirebase();
-    if(!ok){
-      showFirebaseSetupNotice();
-      return;
-    }
+  async function proceedToBranch(){
     var saved = getSelectedBranch();
     if(saved){
       currentBranch = saved;
       await ensureBranchRegistered(saved);
       updateBranchHeader();
       attachItemsListener();
-      ensureStaffName(function(){});
     } else {
-      openBranchModal(true, function(){
-        ensureStaffName(function(){});
-      });
+      openBranchModal(true);
     }
+  }
+
+  async function initApp(){
+    var ok = initFirebase();
+    if(!ok){
+      showFirebaseSetupNotice();
+      return;
+    }
+
+    firebase.auth().onAuthStateChanged(async function(user){
+      if(user){
+        currentUserEmail = user.email;
+        var profile = await loadStaffProfile(user.email);
+        if(profile){
+          currentStaffName = profile.name;
+          currentStaffTitle = profile.title || null;
+          currentUserRole = profile.role || 'staff';
+        } else {
+          currentStaffName = user.email;
+          currentStaffTitle = null;
+          currentUserRole = 'staff';
+        }
+        updateStaffHeader();
+        document.getElementById('branchModalRoot').innerHTML = '';
+        proceedToBranch();
+      } else {
+        currentUserEmail = null;
+        currentStaffName = null;
+        currentStaffTitle = null;
+        currentUserRole = null;
+        updateStaffHeader();
+        renderAuthScreen();
+      }
+    });
   }
 
   function render(){
@@ -1083,7 +1163,7 @@
         '</div>' +
         '<div class="actions">' +
           '<button class="iconbtn edit-btn" title="Edit item">✎</button>' +
-          '<button class="iconbtn del-btn" title="Delete item">✕</button>' +
+          (currentUserRole === 'admin' ? '<button class="iconbtn del-btn" title="Delete item">✕</button>' : '') +
         '</div>';
 
       card.querySelector('.name').textContent = it.name;
@@ -1104,9 +1184,12 @@
 
       card.querySelector('.add-lot-btn').addEventListener('click', function(){ openLotModal(it.id, null); });
       card.querySelector('.edit-btn').addEventListener('click', function(){ openModal(it.id); });
-      card.querySelector('.del-btn').addEventListener('click', function(){
-        if(confirm('Delete "' + it.name + '" and all its lots?')) deleteItem(it.id);
-      });
+      var delBtnEl = card.querySelector('.del-btn');
+      if(delBtnEl){
+        delBtnEl.addEventListener('click', function(){
+          if(confirm('Delete "' + it.name + '" and all its lots?')) deleteItem(it.id);
+        });
+      }
 
       return card;
   }
@@ -1151,7 +1234,7 @@
       '</div>' +
       '<div class="lot-actions">' +
         '<button class="iconbtn lot-edit-btn" title="Edit lot">✎</button>' +
-        '<button class="iconbtn lot-del-btn" title="Delete lot">✕</button>' +
+        (currentUserRole === 'admin' ? '<button class="iconbtn lot-del-btn" title="Delete lot">✕</button>' : '') +
       '</div>';
 
     row.querySelector('.lot-number').textContent = lot.lotNumber ? ('Lot ' + lot.lotNumber) : 'No lot number';
@@ -1159,9 +1242,12 @@
     row.querySelector('.lot-qty').textContent = qtyText;
 
     row.querySelector('.lot-edit-btn').addEventListener('click', function(){ openLotModal(item.id, lot.id); });
-    row.querySelector('.lot-del-btn').addEventListener('click', function(){
-      if(confirm('Delete this lot?')) deleteLot(item.id, lot.id);
-    });
+    var lotDelBtnEl = row.querySelector('.lot-del-btn');
+    if(lotDelBtnEl){
+      lotDelBtnEl.addEventListener('click', function(){
+        if(confirm('Delete this lot?')) deleteLot(item.id, lot.id);
+      });
+    }
 
     return row;
   }
@@ -1877,7 +1963,7 @@
           firstLotFieldsHtml +
           '<div class="field"><label>Notes</label><textarea id="f-notes" rows="2" placeholder="Optional"></textarea></div>' +
           '<div class="modal-actions">' +
-            (existing ? '<button class="btn danger-outline" id="deleteModalBtn" style="margin-right:auto;">Delete item</button>' : '') +
+            (existing && currentUserRole === 'admin' ? '<button class="btn danger-outline" id="deleteModalBtn" style="margin-right:auto;">Delete item</button>' : '') +
             '<button class="btn secondary" id="cancelBtn">Cancel</button>' +
             '<button class="btn" id="saveBtn">Save item</button>' +
           '</div>' +
@@ -2048,7 +2134,7 @@
           '</div>' +
           '<div class="hint">Received date is used to show shelf-life progress. Defaults to today.</div>' +
           '<div class="modal-actions">' +
-            (existingLot ? '<button class="btn danger-outline" id="deleteLotBtn" style="margin-right:auto;">Delete lot</button>' : '') +
+            (existingLot && currentUserRole === 'admin' ? '<button class="btn danger-outline" id="deleteLotBtn" style="margin-right:auto;">Delete lot</button>' : '') +
             '<button class="btn secondary" id="lotCancelBtn">Cancel</button>' +
             '<button class="btn" id="lotSaveBtn">Save lot</button>' +
           '</div>' +
@@ -2276,58 +2362,12 @@
   updateThemeButton();
 
   document.getElementById('switchBranchBtn').addEventListener('click', function(){ openBranchModal(false); });
-  document.getElementById('switchUserBtn').addEventListener('click', function(){
-    var root = document.getElementById('branchModalRoot');
-    root.innerHTML =
-      '<div class="overlay" id="userOverlay">' +
-        '<div class="modal">' +
-          '<h2>Switch user</h2>' +
-          '<div class="field"><label>Your name</label><input id="switchNameInput" type="text" placeholder="e.g. Ahmed Nasr"></div>' +
-          '<div class="hint" id="switchTitlePreview" style="display:none;"></div>' +
-          '<div class="modal-actions">' +
-            '<button class="btn secondary" id="switchNameCancelBtn">Cancel</button>' +
-            '<button class="btn" id="switchNameSaveBtn">Save</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    var input = document.getElementById('switchNameInput');
-    var preview = document.getElementById('switchTitlePreview');
-    input.value = currentStaffName || '';
-
-    input.addEventListener('input', function(){
-      var match = lookupStaffDirectory(input.value);
-      if(match){
-        preview.textContent = match.displayName + ' — ' + match.title;
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
-    });
-
-    document.getElementById('switchNameCancelBtn').addEventListener('click', function(){ root.innerHTML = ''; });
-    document.getElementById('switchNameSaveBtn').addEventListener('click', function(){
-      var val = input.value.trim();
-      if(!val) return;
-      var match = lookupStaffDirectory(val);
-      var finalName = match ? match.displayName : val;
-      var finalTitle = match ? match.title : null;
-      setStaffInfo({ name: finalName, title: finalTitle });
-      currentStaffName = finalName;
-      currentStaffTitle = finalTitle;
-      updateStaffHeader();
-
-      root.innerHTML =
-        '<div class="overlay">' +
-          '<div class="modal" style="text-align:center;">' +
-            '<h2>Welcome back' + (finalName ? ', ' + escapeHtml(finalName) : '') + '</h2>' +
-            (finalTitle ? '<div class="hint" style="text-align:center;">' + escapeHtml(finalTitle) + '</div>' : '') +
-          '</div>' +
-        '</div>';
-
-      setTimeout(function(){ root.innerHTML = ''; }, 1400);
-    });
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    if(confirm('Sign out of this account?')){
+      firebase.auth().signOut();
+    }
   });
+  document.getElementById('manageStaffBtn').addEventListener('click', renderManageStaffModal);
 
   initApp();
 })();
