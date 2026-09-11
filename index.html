@@ -368,6 +368,7 @@
             '<div class="hint" style="text-align:center;margin-top:10px;">' +
               (isSignup ? 'Already have an account? <a href="#" id="authSwitchLink">Sign in</a>' : 'New here? <a href="#" id="authSwitchLink">Create an account</a>') +
             '</div>' +
+            (!isSignup ? '<div class="hint" style="text-align:center;margin-top:6px;"><a href="#" id="forgotPasswordLink">Forgot password?</a></div>' : '') +
           '</div>' +
         '</div>';
 
@@ -375,6 +376,29 @@
         e.preventDefault();
         draw(isSignup ? 'login' : 'signup', null);
       });
+
+      var forgotLink = document.getElementById('forgotPasswordLink');
+      if(forgotLink){
+        forgotLink.addEventListener('click', function(e){
+          e.preventDefault();
+          var email = document.getElementById('authEmail').value.trim();
+          if(!email){
+            draw(mode, 'Enter your email above first, then tap "Forgot password?" again.');
+            return;
+          }
+          firebase.auth().sendPasswordResetEmail(email).then(function(){
+            draw(mode, null);
+            alert('If an account exists for ' + email + ', a password reset email has been sent. Check your inbox (and spam folder).');
+          }).catch(function(err){
+            if(err && err.code === 'auth/invalid-email'){
+              draw(mode, 'That doesn\'t look like a valid email address.');
+            } else {
+              draw(mode, null);
+              alert('If an account exists for ' + email + ', a password reset email has been sent. Check your inbox (and spam folder).');
+            }
+          });
+        });
+      }
 
       document.getElementById('authSubmitBtn').addEventListener('click', function(){
         var email = document.getElementById('authEmail').value.trim();
@@ -436,11 +460,14 @@
 
   function renderManageStaffModal(){
     var root = document.getElementById('modalRoot');
+    var editingEmail = null;
 
     async function draw(){
       var snap = await db.collection('authorizedStaff').get();
       var rows = [];
       snap.forEach(function(doc){ rows.push(doc.data()); });
+
+      var adminCount = rows.filter(function(r){ return r.role === 'admin'; }).length;
 
       var rowsHtml = rows.map(function(r){
         return '<div class="lot-row"><div class="lot-body">' +
@@ -448,41 +475,93 @@
           '<span class="badge ' + (r.role==='admin' ? 'reorder' : 'none') + '">' + (r.role||'staff').toUpperCase() + '</span></div>' +
           '<div class="lot-row2"><span class="lot-exp">' + escapeHtml(r.email) + '</span></div>' +
           (r.title ? '<div class="lot-by">' + escapeHtml(r.title) + '</div>' : '') +
+        '</div>' +
+        '<div class="lot-actions">' +
+          '<button class="iconbtn staff-edit-btn" data-email="' + escapeHtml(r.email) + '" title="Edit">✎</button>' +
+          '<button class="iconbtn staff-remove-btn" data-email="' + escapeHtml(r.email) + '" title="Remove access">✕</button>' +
         '</div></div>';
       }).join('');
+
+      var isEditing = !!editingEmail;
+      var editingRow = isEditing ? rows.find(function(r){ return r.email === editingEmail; }) : null;
 
       root.innerHTML =
         '<div class="overlay" id="staffOverlay">' +
           '<div class="modal">' +
             '<h2>Manage staff access</h2>' +
             '<div class="lot-list" style="margin-bottom:16px;">' + (rowsHtml || '<div class="hint">No staff added yet.</div>') + '</div>' +
-            '<div class="hint">Add a new authorized email — they\'ll set their own password when they sign up.</div>' +
-            '<div class="field"><label>Email</label><input id="newStaffEmail" type="email" placeholder="colleague@example.com"></div>' +
-            '<div class="field"><label>Name</label><input id="newStaffName" type="text" placeholder="e.g. Dr/ Esraa Mohamed"></div>' +
-            '<div class="field"><label>Title</label><input id="newStaffTitle" type="text" placeholder="e.g. Medical Laboratory Scientist, Helwan Branch"></div>' +
-            '<div class="field"><label>Role</label><select id="newStaffRole"><option value="staff">Staff (cannot delete)</option><option value="admin">Admin (can delete)</option></select></div>' +
+            '<div class="hint">' + (isEditing ? 'Editing ' + escapeHtml(editingRow.email) + ' — email can\'t be changed.' : 'Add a new authorized email — they\'ll set their own password when they sign up.') + '</div>' +
+            (isEditing ? '' : '<div class="field"><label>Email</label><input id="newStaffEmail" type="email" placeholder="colleague@example.com"></div>') +
+            '<div class="field"><label>Name</label><input id="newStaffName" type="text" placeholder="e.g. Dr/ Esraa Mohamed" value="' + (editingRow ? escapeHtml(editingRow.name||'') : '') + '"></div>' +
+            '<div class="field"><label>Title</label><input id="newStaffTitle" type="text" placeholder="e.g. Medical Laboratory Scientist, Helwan Branch" value="' + (editingRow ? escapeHtml(editingRow.title||'') : '') + '"></div>' +
+            '<div class="field"><label>Role</label><select id="newStaffRole">' +
+              '<option value="staff"' + (editingRow && editingRow.role==='staff' ? ' selected' : '') + '>Staff (cannot delete)</option>' +
+              '<option value="admin"' + (editingRow && editingRow.role==='admin' ? ' selected' : '') + '>Admin (can delete)</option>' +
+            '</select></div>' +
             '<div class="modal-actions">' +
+              (isEditing ? '<button class="btn secondary" id="cancelEditStaffBtn" style="margin-right:auto;">Cancel edit</button>' : '') +
               '<button class="btn secondary" id="staffCloseBtn">Close</button>' +
-              '<button class="btn" id="addStaffBtn">Add</button>' +
+              '<button class="btn" id="addStaffBtn">' + (isEditing ? 'Save changes' : 'Add') + '</button>' +
             '</div>' +
           '</div>' +
         '</div>';
 
       document.getElementById('staffCloseBtn').addEventListener('click', function(){ root.innerHTML = ''; });
+
+      var cancelEditBtn = document.getElementById('cancelEditStaffBtn');
+      if(cancelEditBtn){
+        cancelEditBtn.addEventListener('click', function(){ editingEmail = null; draw(); });
+      }
+
+      var editBtns = root.querySelectorAll('.staff-edit-btn');
+      for(var i=0;i<editBtns.length;i++){
+        editBtns[i].addEventListener('click', function(){
+          editingEmail = this.getAttribute('data-email');
+          draw();
+        });
+      }
+
+      var removeBtns = root.querySelectorAll('.staff-remove-btn');
+      for(var j=0;j<removeBtns.length;j++){
+        removeBtns[j].addEventListener('click', async function(){
+          var email = this.getAttribute('data-email');
+          var target = rows.find(function(r){ return r.email === email; });
+          if(target && target.role === 'admin' && adminCount <= 1){
+            alert('Can\'t remove the last admin — promote someone else to admin first.');
+            return;
+          }
+          if(!confirm('Remove access for ' + email + '? They will no longer be able to add or edit inventory, even if they still have a password.')) return;
+          try{
+            await db.collection('authorizedStaff').doc(emailDocId(email)).delete();
+            if(editingEmail === email) editingEmail = null;
+            draw();
+          }catch(e){
+            alert('Could not remove this person. Check your connection.');
+          }
+        });
+      }
+
       document.getElementById('addStaffBtn').addEventListener('click', async function(){
-        var email = document.getElementById('newStaffEmail').value.trim();
+        var email = isEditing ? editingEmail : document.getElementById('newStaffEmail').value.trim();
         var name = document.getElementById('newStaffName').value.trim();
         var title = document.getElementById('newStaffTitle').value.trim();
         var role = document.getElementById('newStaffRole').value;
         if(!email || !name) return;
+
+        if(isEditing && editingRow.role === 'admin' && role !== 'admin' && adminCount <= 1){
+          alert('Can\'t remove admin from the last admin — promote someone else first.');
+          return;
+        }
+
         try{
           await db.collection('authorizedStaff').doc(emailDocId(email)).set({
             email: email, name: name, title: title, role: role,
             addedBy: currentStaffName || currentUserEmail, addedAt: new Date().toISOString()
-          });
+          }, { merge: true });
+          editingEmail = null;
           draw();
         }catch(e){
-          alert('Could not add staff member. Check your connection.');
+          alert('Could not save this staff member. Check your connection.');
         }
       });
     }
