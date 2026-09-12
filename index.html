@@ -356,11 +356,12 @@
       var isSignup = mode === 'signup';
       root.innerHTML =
         '<div class="overlay" id="authOverlay">' +
-          '<div class="modal">' +
+          '<div class="modal" style="text-align:center;">' +
+            '<img src="' + LOGO_DATA_URL + '" alt="logo" style="width:64px;height:64px;border-radius:50%;box-shadow:0 0 0 3px #fff, 0 2px 8px rgba(0,0,0,0.15);margin-bottom:12px;">' +
             '<h2>' + (isSignup ? 'Create your account' : 'Sign in') + '</h2>' +
-            (errorMsg ? '<div class="err" style="display:block;margin-bottom:10px;">' + escapeHtml(errorMsg) + '</div>' : '') +
-            '<div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>' +
-            '<div class="field"><label>Password</label><input id="authPassword" type="password" placeholder="At least 6 characters" autocomplete="' + (isSignup ? 'new-password' : 'current-password') + '"></div>' +
+            (errorMsg ? '<div class="err" style="display:block;margin-bottom:10px;text-align:left;">' + escapeHtml(errorMsg) + '</div>' : '') +
+            '<div class="field" style="text-align:left;"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>' +
+            '<div class="field" style="text-align:left;"><label>Password</label><input id="authPassword" type="password" placeholder="At least 6 characters" autocomplete="' + (isSignup ? 'new-password' : 'current-password') + '"></div>' +
             (isSignup ? '<div class="hint">Your account must already be approved by an admin, unless you\'re the very first person setting this up.</div>' : '') +
             '<div class="modal-actions">' +
               '<button class="btn" id="authSubmitBtn">' + (isSignup ? 'Create account' : 'Sign in') + '</button>' +
@@ -415,8 +416,11 @@
     draw('login', null);
   }
 
+  var justSignedIn = false;
+
   async function doLogin(email, password, draw){
     try{
+      justSignedIn = true;
       await firebase.auth().signInWithEmailAndPassword(email, password);
     }catch(e){
       draw('login', e.message || 'Could not sign in.');
@@ -442,6 +446,7 @@
         preApproved = doc.data();
       }
 
+      justSignedIn = true;
       var cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
 
       if(isBootstrap){
@@ -1097,8 +1102,26 @@
           currentUserRole = 'staff';
         }
         updateStaffHeader();
-        document.getElementById('branchModalRoot').innerHTML = '';
-        proceedToBranch();
+
+        if(justSignedIn){
+          justSignedIn = false;
+          var root = document.getElementById('branchModalRoot');
+          root.innerHTML =
+            '<div class="overlay">' +
+              '<div class="modal" style="text-align:center;">' +
+                '<img src="' + LOGO_DATA_URL + '" alt="logo" style="width:56px;height:56px;border-radius:50%;box-shadow:0 0 0 3px #fff, 0 2px 8px rgba(0,0,0,0.15);margin-bottom:12px;">' +
+                '<h2>Welcome back' + (currentStaffName ? ', ' + escapeHtml(currentStaffName) : '') + '</h2>' +
+                (currentStaffTitle ? '<div class="hint" style="text-align:center;">' + escapeHtml(currentStaffTitle) + '</div>' : '') +
+              '</div>' +
+            '</div>';
+          setTimeout(function(){
+            root.innerHTML = '';
+            proceedToBranch();
+          }, 1500);
+        } else {
+          document.getElementById('branchModalRoot').innerHTML = '';
+          proceedToBranch();
+        }
       } else {
         currentUserEmail = null;
         currentStaffName = null;
