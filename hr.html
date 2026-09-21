@@ -66,6 +66,13 @@
   .switch-branch-link:hover{text-decoration:underline;}
   .theme-toggle-btn{margin-left:auto;background:var(--line);border:none;width:38px;height:38px;border-radius:50%;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
   .theme-toggle-btn:hover{background:var(--line-strong);}
+  @media(min-width:860px){
+    .topbar,.app-switch-bar,.stats,.toolbar,.list,.tile-grid,.hr-grid,.cover{
+      max-width:860px;margin-left:auto;margin-right:auto;
+    }
+    body{background:var(--paper);}
+    .item,.hr-card,.module-tile{box-shadow:var(--shadow),0 0 0 1px var(--line);}
+  }
   .branch-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
   .branch-option{background:var(--line);color:var(--ink);border:none;text-align:left;font-weight:500;}
   .branch-option:hover{background:var(--line-strong);}
@@ -255,6 +262,7 @@
   <button class="switch-branch-link" id="logoutBtn" type="button">Log out</button>
   <button class="switch-branch-link" id="manageEmpBtn" type="button" style="margin-left:12px;display:none;">Manage employees</button>
   <button class="switch-branch-link" id="allRequestsBtn" type="button" style="margin-left:12px;display:none;">All requests</button>
+  <button class="switch-branch-link" id="disciplinaryBtn" type="button" style="margin-left:12px;display:none;">Disciplinary cases</button>
   </div>
   <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Toggle dark mode">🌙</button>
 </div>
@@ -471,7 +479,8 @@
     leave: 'Leave Request',
     permission: 'Permission (Early Leave / Late Arrival)',
     salary_slip: 'Salary Slip',
-    experience_certificate: 'Experience Certificate'
+    experience_certificate: 'Experience Certificate',
+    complaint: 'Complaint / Grievance'
   };
 
   async function loadMyProfile(){
@@ -504,6 +513,7 @@
       '<button class="service-btn" data-type="permission"><span class="service-icon">⏱️</span><span class="service-label">Request Permission</span></button>' +
       '<button class="service-btn" data-type="salary_slip"><span class="service-icon">💵</span><span class="service-label">Salary Slip</span></button>' +
       '<button class="service-btn" data-type="experience_certificate"><span class="service-icon">📄</span><span class="service-label">Experience Certificate</span></button>' +
+      '<button class="service-btn" data-type="complaint"><span class="service-icon">📢</span><span class="service-label">Complaint / Grievance</span></button>' +
       '</div></div>';
 
     var historyHtml = '<div class="hr-card"><h3>My Requests</h3><div id="myRequestsList"><div class="empty-note">Loading...</div></div></div>';
@@ -533,21 +543,28 @@
       '<img class="profile-photo" src="' + profile.photo + '" alt="photo">' :
       '<div class="profile-photo-placeholder">👤</div>';
 
+    var onProbation = profile.probationEndDate && profile.probationEndDate >= todayISO();
+    var probationBadge = onProbation ?
+      '<span class="badge forecast-warn" style="margin-left:6px;">ON PROBATION until ' + fmtDate(profile.probationEndDate) + '</span>' : '';
+
     return '<div class="hr-card">' +
       '<h3>My Profile</h3>' +
       '<div class="photo-upload-row">' + photoHtml +
-        '<div><div class="profile-name">' + escapeHtml(profile.name || '') + '</div>' +
+        '<div><div class="profile-name">' + escapeHtml(profile.name || '') + probationBadge + '</div>' +
         '<div class="profile-title">' + escapeHtml(profile.title || '') + '</div>' +
         (editable ? '<button class="btn secondary photo-upload-btn" id="editMyPhotoBtn" type="button" style="margin-top:8px;">Change photo</button>' : '') +
         '</div>' +
       '</div>' +
       '<div class="profile-fields">' +
         '<div><div class="profile-field-label">Employee #</div><div class="profile-field-value">' + escapeHtml(profile.employeeNumber || '—') + '</div></div>' +
-        '<div><div class="profile-field-label">Joined</div><div class="profile-field-value">' + (profile.joinDate ? fmtDate(profile.joinDate) : '—') + '</div></div>' +
+        '<div><div class="profile-field-label">Contract date</div><div class="profile-field-value">' + (profile.joinDate ? fmtDate(profile.joinDate) : '—') + '</div></div>' +
         '<div><div class="profile-field-label">Department</div><div class="profile-field-value">' + escapeHtml(profile.department || '—') + '</div></div>' +
         '<div><div class="profile-field-label">Position</div><div class="profile-field-value">' + escapeHtml(profile.position || '—') + '</div></div>' +
+        '<div><div class="profile-field-label">Work location</div><div class="profile-field-value">' + escapeHtml(profile.workLocation || '—') + '</div></div>' +
+        '<div><div class="profile-field-label">Qualification</div><div class="profile-field-value">' + escapeHtml(profile.qualification || '—') + '</div></div>' +
         '<div><div class="profile-field-label">Phone</div><div class="profile-field-value">' + escapeHtml(profile.phone || '—') + '</div></div>' +
         '<div><div class="profile-field-label">National ID</div><div class="profile-field-value">' + escapeHtml(profile.nationalId || '—') + '</div></div>' +
+        '<div><div class="profile-field-label">Insurance #</div><div class="profile-field-value">' + escapeHtml(profile.insuranceNumber || '—') + '</div></div>' +
       '</div>' +
     '</div>';
   }
@@ -556,7 +573,10 @@
     var kinds = [
       { key: 'annual', label: 'Annual leave' },
       { key: 'casual', label: 'Casual leave' },
-      { key: 'sick', label: 'Sick leave' }
+      { key: 'emergency', label: 'Emergency leave (newborn)' },
+      { key: 'sick', label: 'Sick leave' },
+      { key: 'study', label: 'Study leave' },
+      { key: 'hajj', label: 'Hajj leave' }
     ];
     return kinds.map(function(k){
       var val = (balance && balance[k.key] !== undefined && balance[k.key] !== null) ? balance[k.key] : '—';
@@ -622,7 +642,12 @@
     if(type === 'leave'){
       extraFields =
         '<div class="field"><label>Leave type</label><select id="reqLeaveType">' +
-          '<option value="annual">Annual</option><option value="casual">Casual</option><option value="sick">Sick</option>' +
+          '<option value="annual">Annual</option>' +
+          '<option value="casual">Casual</option>' +
+          '<option value="emergency">Emergency (newborn)</option>' +
+          '<option value="sick">Sick</option>' +
+          '<option value="study">Study</option>' +
+          '<option value="hajj">Hajj (once during service)</option>' +
         '</select></div>' +
         '<div class="field-row">' +
           '<div class="field"><label>From</label><input id="reqStart" type="date"></div>' +
@@ -638,7 +663,9 @@
         '</div>' +
         '<div class="field"><label>Reason</label><textarea id="reqReason" rows="2"></textarea></div>';
     } else {
-      extraFields = '<div class="field"><label>Note (optional)</label><textarea id="reqReason" rows="2" placeholder="Any details HR should know"></textarea></div>';
+      var noteLabel = type === 'complaint' ? 'Describe your complaint or grievance' : 'Note (optional)';
+      var notePlaceholder = type === 'complaint' ? 'What happened, when, and who is involved' : 'Any details HR should know';
+      extraFields = '<div class="field"><label>' + noteLabel + '</label><textarea id="reqReason" rows="3" placeholder="' + notePlaceholder + '"></textarea></div>';
     }
 
     root.innerHTML =
@@ -676,6 +703,7 @@
         if(!data.date){ alert('Pick a date.'); return; }
       } else {
         data.reason = document.getElementById('reqReason').value.trim();
+        if(type === 'complaint' && !data.reason){ alert('Please describe the complaint.'); return; }
       }
       try{
         await db.collection('hrRequests').doc(uid()).set(data);
@@ -751,6 +779,7 @@
       var formHtml = '';
       if(isEditing || isNew){
         var d = editingRow || {};
+        var onProbation = d.probationEndDate && d.probationEndDate >= todayISO();
         formHtml =
           '<div class="hint">' + (isNew ? 'New employee' : 'Editing ' + escapeHtml(d.email)) + '</div>' +
           (isNew ? '<div class="field"><label>Email</label><input id="empEmail" type="email" placeholder="colleague@example.com"></div>' : '') +
@@ -758,7 +787,7 @@
           '<div class="field"><label>Title</label><input id="empTitle" type="text" value="' + escapeHtml(d.title||'') + '"></div>' +
           '<div class="field-row">' +
             '<div class="field"><label>Employee #</label><input id="empNumber" type="text" value="' + escapeHtml(d.employeeNumber||'') + '"></div>' +
-            '<div class="field"><label>Join date</label><input id="empJoinDate" type="date" value="' + (d.joinDate||'') + '"></div>' +
+            '<div class="field"><label>Contract / join date</label><input id="empJoinDate" type="date" value="' + (d.joinDate||'') + '"></div>' +
           '</div>' +
           '<div class="field-row">' +
             '<div class="field"><label>Department</label><input id="empDept" type="text" value="' + escapeHtml(d.department||'') + '"></div>' +
@@ -768,11 +797,25 @@
             '<div class="field"><label>Phone</label><input id="empPhone" type="text" value="' + escapeHtml(d.phone||'') + '"></div>' +
             '<div class="field"><label>National ID</label><input id="empNationalId" type="text" value="' + escapeHtml(d.nationalId||'') + '"></div>' +
           '</div>' +
-          '<div class="hint" style="margin-top:8px;">Leave balances</div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label>Insurance number</label><input id="empInsuranceNum" type="text" value="' + escapeHtml(d.insuranceNumber||'') + '"></div>' +
+            '<div class="field"><label>Qualification</label><input id="empQualification" type="text" value="' + escapeHtml(d.qualification||'') + '"></div>' +
+          '</div>' +
+          '<div class="field"><label>Work location</label><input id="empWorkLocation" type="text" value="' + escapeHtml(d.workLocation||'') + '"></div>' +
+          '<div class="field"><label>Probation end date</label><input id="empProbationEnd" type="date" value="' + (d.probationEndDate||'') + '"></div>' +
+          '<div class="hint">Article 21: probation may not exceed 3 months, and can only be applied once with the same employer.' + (onProbation ? ' <b style="color:var(--warn-ink);">Currently within probation.</b>' : '') + '</div>' +
+          '<div class="hint" style="margin-top:8px;">Leave balances (days) — per Article 40</div>' +
           '<div class="field-row">' +
             '<div class="field"><label>Annual</label><input id="empAnnual" type="number" value="' + ((d.leaveBalance&&d.leaveBalance.annual!==undefined)?d.leaveBalance.annual:'') + '"></div>' +
             '<div class="field"><label>Casual</label><input id="empCasual" type="number" value="' + ((d.leaveBalance&&d.leaveBalance.casual!==undefined)?d.leaveBalance.casual:'') + '"></div>' +
+          '</div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label>Emergency</label><input id="empEmergency" type="number" value="' + ((d.leaveBalance&&d.leaveBalance.emergency!==undefined)?d.leaveBalance.emergency:'') + '"></div>' +
             '<div class="field"><label>Sick</label><input id="empSick" type="number" value="' + ((d.leaveBalance&&d.leaveBalance.sick!==undefined)?d.leaveBalance.sick:'') + '"></div>' +
+          '</div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label>Study</label><input id="empStudy" type="number" value="' + ((d.leaveBalance&&d.leaveBalance.study!==undefined)?d.leaveBalance.study:'') + '"></div>' +
+            '<div class="field"><label>Hajj (0 or 1)</label><input id="empHajj" type="number" min="0" max="1" value="' + ((d.leaveBalance&&d.leaveBalance.hajj!==undefined)?d.leaveBalance.hajj:'') + '"></div>' +
           '</div>' +
           '<div class="modal-actions">' +
             (isEditing ? '<button class="btn danger-outline" id="empDeleteBtn" style="margin-right:auto;">Delete</button>' : '') +
@@ -815,9 +858,15 @@
           var email = isNew ? document.getElementById('empEmail').value.trim() : editingRow.email;
           var name = document.getElementById('empName').value.trim();
           if(!email || !name) return;
-          var annualVal = document.getElementById('empAnnual').value;
-          var casualVal = document.getElementById('empCasual').value;
-          var sickVal = document.getElementById('empSick').value;
+          var probationEnd = document.getElementById('empProbationEnd').value || null;
+          if(probationEnd && d.joinDate){
+            var maxProbation = new Date(d.joinDate);
+            maxProbation.setMonth(maxProbation.getMonth() + 3);
+            if(new Date(probationEnd) > maxProbation){
+              if(!confirm('Probation end date is more than 3 months after the join date, which exceeds Article 21\'s limit. Save anyway?')) return;
+            }
+          }
+          function numOrNull(id){ var v = document.getElementById(id).value; return v === '' ? null : Number(v); }
           var data = {
             email: email,
             name: name,
@@ -828,10 +877,17 @@
             position: document.getElementById('empPosition').value.trim(),
             phone: document.getElementById('empPhone').value.trim(),
             nationalId: document.getElementById('empNationalId').value.trim(),
+            insuranceNumber: document.getElementById('empInsuranceNum').value.trim(),
+            qualification: document.getElementById('empQualification').value.trim(),
+            workLocation: document.getElementById('empWorkLocation').value.trim(),
+            probationEndDate: probationEnd,
             leaveBalance: {
-              annual: annualVal === '' ? null : Number(annualVal),
-              casual: casualVal === '' ? null : Number(casualVal),
-              sick: sickVal === '' ? null : Number(sickVal)
+              annual: numOrNull('empAnnual'),
+              casual: numOrNull('empCasual'),
+              emergency: numOrNull('empEmergency'),
+              sick: numOrNull('empSick'),
+              study: numOrNull('empStudy'),
+              hajj: numOrNull('empHajj')
             },
             updatedBy: currentStaffName || currentUserEmail,
             updatedAt: new Date().toISOString()
@@ -935,8 +991,192 @@
     }
   }
 
+  // ---------- Admin: Disciplinary Cases (Articles 46–59) ----------
+
+  function daysBetweenDates(a, b){
+    return Math.round((new Date(b) - new Date(a)) / 86400000);
+  }
+
+  function checkDisciplinaryCompliance(c){
+    var warnings = [];
+    if(c.discoveryDate && c.investigationStartDate){
+      var gap = daysBetweenDates(c.discoveryDate, c.investigationStartDate);
+      if(gap > 7) warnings.push('Investigation started ' + gap + ' days after discovery — exceeds the 7-day limit (Article 46).');
+    }
+    if(c.investigationStartDate && !c.investigationEndDate && c.status === 'open'){
+      var deadline = new Date(c.investigationStartDate);
+      deadline.setMonth(deadline.getMonth() + 3);
+      if(new Date() > deadline) warnings.push('Investigation has run past the 3-month legal limit (Article 46) without new evidence noted.');
+    }
+    if(c.investigationEndDate && c.penaltyDate){
+      var gap2 = daysBetweenDates(c.investigationEndDate, c.penaltyDate);
+      if(gap2 > 30) warnings.push('Penalty issued ' + gap2 + ' days after the investigation ended — exceeds the 30-day limit (Article 46).');
+    }
+    if(c.penaltyDays !== null && c.penaltyDays !== undefined && c.penaltyDays > 5){
+      warnings.push('Deduction of ' + c.penaltyDays + ' days exceeds the 5-day-per-violation limit (Article 46).');
+    }
+    return warnings;
+  }
+
+  function renderDisciplinaryModal(){
+    var root = document.getElementById('modalRoot');
+    var editingId = null;
+
+    async function draw(){
+      var snap = await db.collection('disciplinaryCases').get();
+      var rows = [];
+      snap.forEach(function(doc){ var d = doc.data(); d.__id = doc.id; rows.push(d); });
+      rows.sort(function(a,b){ return (b.discoveryDate||'').localeCompare(a.discoveryDate||''); });
+
+      var isNew = editingId === '__new__';
+      var editingRow = (editingId && !isNew) ? rows.find(function(r){ return r.__id === editingId; }) : null;
+      var isEditing = !!editingRow;
+
+      if(!isEditing && !isNew){
+        var rowsHtml = rows.map(function(r){
+          var warnings = checkDisciplinaryCompliance(r);
+          var warnBadge = warnings.length ? '<span class="badge red" title="' + escapeHtml(warnings.join(' ')) + '">⚠ ' + warnings.length + '</span>' : '';
+          return '<div class="req-row" data-id="' + r.__id + '" style="cursor:pointer;">' +
+            '<div class="req-info">' +
+              '<div class="req-type">' + escapeHtml(r.employeeName||r.employeeEmail) + '</div>' +
+              '<div class="req-meta">' + escapeHtml((r.violationDescription||'').slice(0,60)) + '</div>' +
+            '</div>' +
+            '<span class="req-status ' + (r.status==='closed'?'approved':'pending') + '">' + (r.status||'open').toUpperCase() + '</span>' +
+            warnBadge +
+          '</div>';
+        }).join('');
+
+        root.innerHTML =
+          '<div class="overlay" id="discOverlay">' +
+            '<div class="modal">' +
+              '<h2>Disciplinary cases</h2>' +
+              '<div class="hint">Tracks investigations per Articles 46–59: 7 days to start, 3 months max duration, penalty within 30 days of closing, deductions capped at 5 days per violation.</div>' +
+              '<div>' + (rowsHtml || '<div class="empty-note">No cases recorded.</div>') + '</div>' +
+              '<div class="modal-actions"><button class="btn secondary" id="discCloseBtn">Close</button><button class="btn" id="discAddBtn">+ New case</button></div>' +
+            '</div>' +
+          '</div>';
+
+        document.getElementById('discCloseBtn').addEventListener('click', function(){ root.innerHTML = ''; });
+        document.getElementById('discAddBtn').addEventListener('click', function(){ editingId = '__new__'; draw(); });
+        var caseRows = root.querySelectorAll('.req-row');
+        for(var i=0;i<caseRows.length;i++){
+          caseRows[i].addEventListener('click', function(){ editingId = this.getAttribute('data-id'); draw(); });
+        }
+        return;
+      }
+
+      var d = editingRow || {};
+      var warnings = isEditing ? checkDisciplinaryCompliance(d) : [];
+      var warnHtml = warnings.length ?
+        '<div class="alarm-banner" style="margin:0 0 14px;"><div class="alarm-text"><span class="alarm-dot"></span><span>' + escapeHtml(warnings.join(' ')) + '</span></div></div>' : '';
+
+      var empOptions = '<option value="">— pick employee —</option>';
+      try{
+        var empSnap = await db.collection('employees').get();
+        empSnap.forEach(function(doc){
+          var e = doc.data();
+          var sel = (d.employeeEmail === e.email) ? ' selected' : '';
+          empOptions += '<option value="' + escapeHtml(e.email) + '" data-name="' + escapeHtml(e.name||'') + '"' + sel + '>' + escapeHtml(e.name||e.email) + '</option>';
+        });
+      }catch(e){}
+
+      root.innerHTML =
+        '<div class="overlay" id="discFormOverlay">' +
+          '<div class="modal">' +
+            '<h2>' + (isNew ? 'New disciplinary case' : 'Edit case') + '</h2>' +
+            warnHtml +
+            '<div class="field"><label>Employee</label><select id="discEmp">' + empOptions + '</select></div>' +
+            '<div class="field"><label>Violation description (must relate to work — Article 46)</label><textarea id="discViolation" rows="2">' + escapeHtml(d.violationDescription||'') + '</textarea></div>' +
+            '<div class="field-row">' +
+              '<div class="field"><label>Discovery date</label><input id="discDiscoveryDate" type="date" value="' + (d.discoveryDate||'') + '"></div>' +
+              '<div class="field"><label>Investigation start</label><input id="discStartDate" type="date" value="' + (d.investigationStartDate||'') + '"></div>' +
+            '</div>' +
+            '<div class="field"><label>Investigation end date (leave blank if still open)</label><input id="discEndDate" type="date" value="' + (d.investigationEndDate||'') + '"></div>' +
+            '<div class="field-row">' +
+              '<div class="field"><label>Penalty type</label><select id="discPenaltyType">' +
+                '<option value=""' + (!d.penaltyType?' selected':'') + '>None yet</option>' +
+                '<option value="warning"' + (d.penaltyType==='warning'?' selected':'') + '>Warning</option>' +
+                '<option value="deduction"' + (d.penaltyType==='deduction'?' selected':'') + '>Wage deduction</option>' +
+                '<option value="dismissal"' + (d.penaltyType==='dismissal'?' selected':'') + '>Dismissal (requires court ruling)</option>' +
+                '<option value="other"' + (d.penaltyType==='other'?' selected':'') + '>Other</option>' +
+              '</select></div>' +
+              '<div class="field"><label>Deduction (days, max 5)</label><input id="discPenaltyDays" type="number" min="0" max="5" value="' + (d.penaltyDays!==undefined&&d.penaltyDays!==null?d.penaltyDays:'') + '"></div>' +
+            '</div>' +
+            '<div class="field"><label>Penalty date</label><input id="discPenaltyDate" type="date" value="' + (d.penaltyDate||'') + '"></div>' +
+            '<div class="field"><label>Notes</label><textarea id="discNotes" rows="2">' + escapeHtml(d.notes||'') + '</textarea></div>' +
+            '<div class="field"><label>Status</label><select id="discStatus">' +
+              '<option value="open"' + (!d.status||d.status==='open'?' selected':'') + '>Open</option>' +
+              '<option value="closed"' + (d.status==='closed'?' selected':'') + '>Closed</option>' +
+            '</select></div>' +
+            '<div class="modal-actions">' +
+              (isEditing ? '<button class="btn danger-outline" id="discDeleteBtn" style="margin-right:auto;">Delete</button>' : '') +
+              '<button class="btn secondary" id="discCancelBtn">Cancel</button>' +
+              '<button class="btn" id="discSaveBtn">Save</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      document.getElementById('discCancelBtn').addEventListener('click', function(){ editingId = null; draw(); });
+      var discDelBtn = document.getElementById('discDeleteBtn');
+      if(discDelBtn){
+        discDelBtn.addEventListener('click', async function(){
+          if(!confirm('Delete this case record?')) return;
+          await db.collection('disciplinaryCases').doc(editingRow.__id).delete();
+          editingId = null;
+          draw();
+        });
+      }
+      document.getElementById('discSaveBtn').addEventListener('click', async function(){
+        var empSelect = document.getElementById('discEmp');
+        var empEmail = empSelect.value;
+        var empName = empEmail ? empSelect.options[empSelect.selectedIndex].getAttribute('data-name') : '';
+        var violation = document.getElementById('discViolation').value.trim();
+        if(!empEmail || !violation){ alert('Pick an employee and describe the violation.'); return; }
+
+        var penaltyDaysVal = document.getElementById('discPenaltyDays').value;
+        var data = {
+          employeeEmail: empEmail,
+          employeeName: empName,
+          violationDescription: violation,
+          discoveryDate: document.getElementById('discDiscoveryDate').value || null,
+          investigationStartDate: document.getElementById('discStartDate').value || null,
+          investigationEndDate: document.getElementById('discEndDate').value || null,
+          penaltyType: document.getElementById('discPenaltyType').value || null,
+          penaltyDays: penaltyDaysVal === '' ? null : Number(penaltyDaysVal),
+          penaltyDate: document.getElementById('discPenaltyDate').value || null,
+          notes: document.getElementById('discNotes').value.trim(),
+          status: document.getElementById('discStatus').value,
+          updatedBy: currentStaffName || currentUserEmail,
+          updatedAt: new Date().toISOString()
+        };
+
+        var checkWarnings = checkDisciplinaryCompliance(data);
+        if(checkWarnings.length){
+          if(!confirm('This case has legal deadline issues:\n\n' + checkWarnings.join('\n') + '\n\nSave anyway?')) return;
+        }
+
+        try{
+          if(isEditing){
+            await db.collection('disciplinaryCases').doc(editingRow.__id).set(data, { merge: true });
+          } else {
+            data.createdBy = currentStaffName || currentUserEmail;
+            data.createdAt = new Date().toISOString();
+            await db.collection('disciplinaryCases').doc(uid()).set(data);
+          }
+          editingId = null;
+          draw();
+        }catch(e){
+          alert('Could not save. Check your connection.');
+        }
+      });
+    }
+
+    draw();
+  }
+
   document.getElementById('manageEmpBtn').addEventListener('click', renderManageEmployeesModal);
   document.getElementById('allRequestsBtn').addEventListener('click', renderAllRequestsModal);
+  document.getElementById('disciplinaryBtn').addEventListener('click', renderDisciplinaryModal);
 
 
   document.getElementById('themeToggleBtn').addEventListener('click', function(){
@@ -971,6 +1211,7 @@
         updateStaffHeader();
         document.getElementById('manageEmpBtn').style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
         document.getElementById('allRequestsBtn').style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
+        document.getElementById('disciplinaryBtn').style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
 
         if(justSignedIn){
           justSignedIn = false;
